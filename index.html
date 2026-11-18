@@ -1,0 +1,974 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>حساس العكارة بالأردوينو</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&family=Share+Tech+Mono&family=Tajawal:wght@400;500;700&display=swap">
+<style>
+/* Layout: pink studio page. One bold place = the dark "lab stage" with a glowing beam; everything around it stays soft and quiet. */
+:root{
+  --bg:#fff4f8; --surface:#ffffff; --surface2:#ffe2ee; --ink:#3b1530; --muted:#774d66;
+  --accent:#d92d79; --accent-ink:#ffffff; --line:#f1c2d5;
+  --ok:#16805a; --bad:#b8283f;
+  --warn-bg:#fff0c7; --warn-line:#e7b64a; --warn-ink:#5e4100;
+  --lcd-bg:#1d3fc4; --lcd-ink:#e6f0ff;
+  --font-display:'Baloo Bhaijaan 2','Tajawal',system-ui,sans-serif;
+  --font-body:'Tajawal',system-ui,sans-serif;
+  --font-lcd:'Share Tech Mono',ui-monospace,Menlo,monospace;
+  --r:18px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1a0d17; --surface:#2a1626; --surface2:#3b1f35; --ink:#fde9f2; --muted:#d3a9c1;
+    --accent:#ff6fa8; --accent-ink:#2a0c1c; --line:#54304a;
+    --ok:#4fd6a0; --bad:#ff8397;
+    --warn-bg:#3a2b0a; --warn-line:#8a6a1c; --warn-ink:#ffdb8c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1a0d17; --surface:#2a1626; --surface2:#3b1f35; --ink:#fde9f2; --muted:#d3a9c1;
+  --accent:#ff6fa8; --accent-ink:#2a0c1c; --line:#54304a;
+  --ok:#4fd6a0; --bad:#ff8397;
+  --warn-bg:#3a2b0a; --warn-line:#8a6a1c; --warn-ink:#ffdb8c;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.75;
+  padding-block:16px 36px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+.app{max-width:1060px;margin-inline:auto}
+h1,h2,h3{font-family:var(--font-display);line-height:1.3;margin:0;text-wrap:balance}
+p{margin:0}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
+section{margin-top:52px}
+h2{font-size:clamp(1.6rem,4.5vw,2.1rem);margin-bottom:6px}
+.lead{color:var(--muted);max-width:44em;margin-bottom:20px}
+
+/* hero */
+.hero{
+  display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,.6fr); gap:24px; align-items:center;
+  background:var(--surface2); border:2px solid var(--line); border-radius:28px;
+  padding:clamp(26px,5vw,52px) clamp(20px,5vw,48px);
+}
+.hero h1{font-size:clamp(2.2rem,7.5vw,4rem);margin-bottom:10px}
+.hero p{color:var(--muted);font-size:1.1rem;max-width:32em;margin-bottom:20px}
+.cta{
+  display:inline-block;background:var(--accent);color:var(--accent-ink);text-decoration:none;
+  font-family:var(--font-display);font-weight:700;font-size:1.1rem;padding:.55em 1.6em;border-radius:999px;
+}
+.by{display:inline-block;margin-inline-start:10px;color:var(--muted);font-weight:500;font-size:.95rem}
+.hero svg{width:100%;max-width:190px;height:auto;justify-self:center}
+@media (max-width:700px){ .hero{grid-template-columns:minmax(0,1fr)} .hero svg{display:none} }
+@media (prefers-reduced-motion:no-preference){
+  .hero .big-drop{animation:bob 3.4s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(-8px)}}
+}
+
+/* generic card */
+.card{background:var(--surface);border:2px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.card h3{font-size:1.2rem;margin-bottom:6px}
+
+/* lab layout */
+.lab{
+  display:grid; gap:18px; align-items:start;
+  grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);
+  grid-template-areas:"stage controls" "desc controls" "chart table";
+}
+.stage{grid-area:stage;background:#2a0f2e;border:2px solid var(--line);border-radius:22px;overflow:hidden}
+.stage svg{display:block;width:100%;height:auto}
+.controls{grid-area:controls;display:grid;gap:18px}
+.desc{grid-area:desc}
+.chartcard{grid-area:chart}
+.tablebox{grid-area:table}
+@media (max-width:860px){
+  .lab{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "controls" "desc" "table" "chart"}
+}
+.lbl{font-size:.9rem;color:var(--muted);font-weight:700;margin-bottom:6px;display:block}
+
+/* LCD */
+.lcdwrap{background:#1f8f4c;border-radius:12px;padding:10px}
+.lcdbezel{background:#101a33;border-radius:5px;padding:6px}
+.lcd{
+  margin:0;background:var(--lcd-bg);color:var(--lcd-ink);font-family:var(--font-lcd);
+  font-size:clamp(1rem,4.6vw,1.4rem);letter-spacing:.12em;line-height:1.5;
+  padding:10px 12px;border-radius:3px;direction:ltr;text-align:left;white-space:pre;overflow:hidden;
+  text-shadow:0 0 6px rgba(190,215,255,.6);
+}
+
+/* readout */
+.pct{font-family:var(--font-display);font-size:2.6rem;line-height:1;font-variant-numeric:tabular-nums;font-weight:800}
+.bar{height:14px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;width:100%;background:#f2b705;border-radius:99px}
+
+input[type=range]{width:100%;accent-color:var(--accent);height:32px;margin:0}
+.ends{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.btn{
+  font:inherit;font-weight:700;color:var(--ink);background:var(--surface);
+  border:2px solid var(--accent);border-radius:999px;padding:.45em 1.1em;cursor:pointer;
+}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.55;cursor:default}
+@media (prefers-reduced-motion:no-preference){
+  .btn{transition:transform .12s}
+  .btn:hover:not(:disabled){transform:translateY(-2px)}
+  .btn:active:not(:disabled){transform:translateY(1px)}
+}
+
+.badge{
+  display:inline-block;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:.85rem;
+  padding:.1em .8em;border-radius:99px;margin-bottom:6px;
+}
+
+/* level list */
+.levels{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+.lv{
+  display:grid;grid-template-columns:2rem 18px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;
+  font:inherit;color:var(--ink);text-align:start;background:var(--surface);
+  border:2px solid var(--line);border-radius:14px;padding:6px 12px;cursor:pointer;
+}
+.lv b{font-family:var(--font-display);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.lv .sw{width:18px;height:18px;border-radius:50%;border:2px solid var(--line)}
+.lv small{color:var(--muted);font-variant-numeric:tabular-nums}
+.lv[aria-pressed="true"]{border-color:var(--accent);background:var(--surface2)}
+
+/* parts */
+.parts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.part{display:flex;flex-direction:column;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:var(--r);padding:16px}
+.part svg{width:100%;max-width:140px;height:auto;align-self:flex-start}
+.part h3{font-size:1.15rem}
+.part .role{color:var(--accent);font-weight:700;font-size:.95rem}
+.part .more{color:var(--muted);font-size:.95rem}
+.part button{align-self:flex-start;margin-top:4px}
+
+/* flow */
+.flow{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.flow li{background:var(--surface);border:2px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.flow .num{
+  display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;
+  background:var(--surface2);font-family:var(--font-display);font-weight:800;margin-bottom:4px;
+}
+.flow h3{font-size:1.1rem}
+.flow p{color:var(--muted);font-size:.95rem}
+.flow li.on{border-color:var(--accent);background:var(--surface2)}
+.flow li.on .num{background:var(--accent);color:var(--accent-ink)}
+@media (prefers-reduced-motion:no-preference){ .flow li{transition:transform .25s,background .25s,border-color .25s} .flow li.on{transform:translateY(-5px)} }
+
+/* science */
+.facts{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.fact{background:var(--surface2);border-radius:var(--r);padding:16px 18px}
+.fact h3{font-size:1.15rem;margin-bottom:4px}
+.fact p{color:var(--muted)}
+
+/* chart */
+.chart{display:block;width:100%;height:auto;direction:ltr}
+.chart .ax{fill:var(--muted);font:14px var(--font-body)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .curve{fill:none;stroke:var(--accent);stroke-width:3.5;stroke-linecap:round}
+.chart .area{fill:var(--accent);opacity:.14}
+.chart .guide{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:4 4}
+.chart .dot{fill:var(--accent);stroke:var(--surface);stroke-width:3}
+.chart .val{fill:var(--ink);font:700 16px var(--font-display);paint-order:stroke;stroke:var(--surface);stroke-width:5px}
+.note-s{color:var(--muted);font-size:.9rem;margin-top:6px}
+
+/* quiz */
+.quiz{position:relative;overflow:hidden;max-width:720px}
+.qmeta{display:flex;justify-content:space-between;color:var(--muted);font-weight:700;font-size:.9rem;margin-bottom:6px}
+.quiz h3{font-size:1.35rem;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{
+  display:flex;gap:10px;align-items:center;width:100%;font:inherit;color:var(--ink);text-align:start;
+  background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 14px;cursor:pointer;
+}
+.opt .mk{width:1.2em;font-weight:800}
+.opt:disabled{cursor:default}
+.opt.good{border-color:var(--ok);background:var(--surface2)}
+.opt.bad{border-color:var(--bad)}
+.opt.good .mk{color:var(--ok)}
+.opt.bad .mk{color:var(--bad)}
+.fb{margin-top:12px;min-height:1.6em;color:var(--muted)}
+.score{font-family:var(--font-display);font-size:3rem;font-weight:800;line-height:1.1}
+.conf{
+  position:absolute;top:-24px;width:10px;height:14px;border-radius:50% 50% 50% 50%/62% 62% 38% 38%;
+  background:var(--accent);animation:fall 1.9s ease-in forwards;pointer-events:none;
+}
+@keyframes fall{to{transform:translateY(480px);opacity:0}}
+
+/* detective challenge */
+.cta.alt{background:transparent;color:var(--ink);border:2px solid var(--accent);margin-inline-start:8px}
+.pill-new{display:inline-block;background:var(--accent);color:var(--accent-ink);font:800 .8rem var(--font-body);padding:.1em .8em;border-radius:99px;margin-inline-start:10px;vertical-align:middle}
+.det{position:relative;overflow:hidden;display:grid;gap:16px;background:var(--surface2);border:2px solid var(--line);border-radius:26px;padding:clamp(14px,3vw,26px)}
+.det-step{margin:0;font-weight:700;font-size:1.05rem;min-height:3.4em}
+.g5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.sample,.slot{font:inherit;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;border-radius:14px;padding:8px 4px 6px}
+.sample{background:var(--surface);border:2px solid var(--line);cursor:pointer}
+.sample svg,.slot svg{width:100%;max-width:84px;height:auto}
+.sample .gl,.slot .gl{stroke:var(--muted)}
+.sample .nm,.slot .nm{font-size:.8rem;font-weight:700}
+.sample:disabled{opacity:.28;cursor:default}
+.slot{position:relative;background:var(--bg);border:2px dashed var(--line);cursor:default}
+.slot:disabled{color:var(--ink)}
+.slot svg,.slot .ph{margin-top:14px}
+.slot .ph{width:100%;max-width:84px;aspect-ratio:100/140;border-radius:12px;background:var(--surface2);opacity:.7}
+.slot .n{position:absolute;top:3px;inset-inline-start:6px;font:800 .9rem var(--font-display);color:var(--muted)}
+.slot .res{font-size:.72rem;font-weight:700;line-height:1.3;text-align:center;min-height:2.6em}
+.slot.full{background:var(--surface);border-style:solid;border-color:var(--accent);cursor:pointer}
+.slot.full:disabled{cursor:default}
+.slot.ok{border-color:var(--ok)}
+.slot.no{border-color:var(--bad)}
+.slot.ok .res{color:var(--ok)}
+.slot.no .res{color:var(--bad)}
+.sample.lit,.slot.lit{border-color:#e0a800}
+.hg{opacity:0;transition:opacity .3s}
+.lit .hg{opacity:1}
+.btn[aria-pressed="true"]{background:#ffd54a;color:#3b1530;border-color:#e0a800}
+.rig{background:#2a0f2e;border-radius:18px;overflow:hidden}
+.rig .rs{display:block;width:100%;height:auto}
+.rig .gl{stroke:#efdcf7}
+.rigbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:12px 14px;background:#1b0a1f}
+.rigbar .lcdwrap{flex:1 1 220px;max-width:340px}
+.rigbar p{flex:1 1 160px;color:#f6d9e8;font-weight:700}
+
+/* note + footer */
+.warn{
+  display:flex;gap:14px;align-items:center;background:var(--warn-bg);color:var(--warn-ink);
+  border:2px solid var(--warn-line);border-radius:var(--r);padding:16px 20px;font-weight:500;
+}
+.warn svg{flex:none;width:42px;height:42px}
+footer{
+  margin-top:40px;background:var(--surface2);border:2px solid var(--line);border-radius:var(--r);
+  padding:16px 20px;text-align:center;font-family:var(--font-display);font-size:1.25rem;font-weight:700;
+}
+</style>
+
+<div class="app" dir="rtl" lang="ar">
+
+<header class="hero">
+  <div>
+    <h1>حساس العكارة بالأردوينو</h1>
+    <p>مشروع يعرف إذا كان الماء صافياً أو عكراً من خلال كمية الضوء التي تعبره. حرّك الشريط، ارمِ بعض الطين في الكأس، وشاهد ماذا يحدث للحساس.</p>
+    <a class="cta" href="#lab">ابدأ التجربة</a><a class="cta alt" href="#detective">جرّب التحدي</a>
+    <span class="by">إعداد الطالبة: ريمان حسن كريري</span>
+  </div>
+  <svg viewBox="0 0 120 150" aria-hidden="true">
+    <g class="big-drop">
+      <path d="M60 6C60 6 12 62 12 100a48 48 0 0 0 96 0C108 62 60 6 60 6Z" fill="#4aa8e8"/>
+      <path d="M36 98c0-14 8-28 16-40" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="7" stroke-linecap="round"/>
+    </g>
+    <path d="M104 22c0 0-9 11-9 18a9 9 0 0 0 18 0c0-7-9-18-9-18Z" fill="#e0407f"/>
+    <path d="M12 130c0 0-6 8-6 13a6 6 0 0 0 12 0c0-5-6-13-6-13Z" fill="#e0407f" opacity=".7"/>
+  </svg>
+</header>
+
+<section id="lab" aria-labelledby="h-lab">
+  <h2 id="h-lab">مختبر العكارة</h2>
+  <p class="lead">يقيس الحساس نقاء الماء من خلال مرور الضوء فيه. المصباح على اليسار يرسل الشعاع، والحساس على اليمين يستقبل ما يصله.</p>
+
+  <div class="lab">
+    <div class="stage">
+      <svg id="scene" viewBox="0 0 640 360" role="img" aria-label="مصباح يرسل شعاع ضوء عبر كأس ماء إلى حساس. كلما زادت العكارة ضعف الشعاع الواصل.">
+        <defs>
+          <clipPath id="glassClip"><path d="M228 70H412L398 296Q396 306 386 306H254Q244 306 242 296Z"/></clipPath>
+          <linearGradient id="beamG" gradientUnits="userSpaceOnUse" x1="120" y1="0" x2="530" y2="0">
+            <stop offset="0" stop-color="#ffd54a" stop-opacity=".95"/>
+            <stop offset=".263" stop-color="#ffd54a" stop-opacity=".95"/>
+            <stop id="bs2" offset=".712" stop-color="#ffd54a" stop-opacity=".5"/>
+            <stop id="bs3" offset="1" stop-color="#ffd54a" stop-opacity=".5"/>
+          </linearGradient>
+          <filter id="blur" x="-10%" y="-80%" width="120%" height="260%"><feGaussianBlur stdDeviation="9"/></filter>
+          <filter id="blur2" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="8"/></filter>
+        </defs>
+        <rect width="640" height="360" fill="#2a0f2e"/>
+        <rect y="306" width="640" height="54" fill="#1b0a1f"/>
+
+        <!-- water -->
+        <rect id="water" x="226" y="104" width="190" height="206" clip-path="url(#glassClip)" fill="#76c8f6" fill-opacity=".55"/>
+        <ellipse cx="320" cy="104" rx="90" ry="6" fill="#fff" fill-opacity=".35" clip-path="url(#glassClip)"/>
+
+        <!-- beam -->
+        <polygon points="120,158 530,150 530,210 120,202" fill="url(#beamG)" filter="url(#blur)" opacity=".75"/>
+        <polygon points="120,168 530,164 530,196 120,192" fill="url(#beamG)"/>
+
+        <!-- particles and scattered light -->
+        <g id="particles" clip-path="url(#glassClip)"></g>
+        <g id="rays" clip-path="url(#glassClip)" stroke="#ffe9a3" stroke-width="2" stroke-linecap="round"></g>
+
+        <!-- glass -->
+        <path d="M228 70H412L398 296Q396 306 386 306H254Q244 306 242 296Z" fill="none" stroke="#efdcf7" stroke-opacity=".85" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M242 84L252 290" stroke="#fff" stroke-opacity=".35" stroke-width="6" stroke-linecap="round"/>
+        <ellipse cx="320" cy="70" rx="92" ry="7" fill="none" stroke="#efdcf7" stroke-opacity=".6" stroke-width="3"/>
+        <ellipse id="ripple" cx="320" cy="104" rx="10" ry="3" fill="none" stroke="#fff" stroke-width="2" opacity="0" style="transform-box:fill-box;transform-origin:center"/>
+        <circle id="clump" cx="320" cy="22" r="9" fill="#8b5a2b" style="visibility:hidden"/>
+
+        <!-- LED module (KY-016) -->
+        <rect x="34" y="138" width="64" height="84" rx="6" fill="#15151b" stroke="#3a3a46" stroke-width="2"/>
+        <rect x="46" y="150" width="14" height="10" fill="#c9a24a"/><rect x="46" y="200" width="14" height="10" fill="#c9a24a"/>
+        <rect x="96" y="167" width="26" height="26" rx="13" fill="#fff7d1"/>
+        <circle cx="106" cy="180" r="16" fill="#ffd54a" opacity=".6" filter="url(#blur2)"/>
+
+        <!-- sensor module (KY-018) -->
+        <circle id="ldrGlow" cx="552" cy="180" r="30" fill="#ffd54a" opacity=".5" filter="url(#blur2)"/>
+        <rect x="530" y="136" width="76" height="88" rx="6" fill="#1f4aa8" stroke="#163a86" stroke-width="2"/>
+        <circle cx="552" cy="180" r="16" fill="#c98a3a" stroke="#8a4f14" stroke-width="2"/>
+        <path d="M542 174q5-6 10 0t10 0M542 182q5-6 10 0t10 0M542 190q5-6 10 0t10 0" fill="none" stroke="#7a420f" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="588" cy="156" r="7" fill="#d8dde6" stroke="#8f98a8"/>
+        <rect x="574" y="224" width="6" height="14" fill="#c9cdd6"/><rect x="584" y="224" width="6" height="14" fill="#c9cdd6"/><rect x="594" y="224" width="6" height="14" fill="#c9cdd6"/>
+
+        <!-- labels -->
+        <g text-anchor="middle" style="font-family:Tajawal,sans-serif">
+          <text x="66" y="328" fill="#f6d9e8" font-size="15" font-weight="700">مصباح الضوء</text>
+          <text x="66" y="348" fill="#cfa5c4" font-size="12" direction="ltr">KY-016</text>
+          <text x="320" y="328" fill="#f6d9e8" font-size="15" font-weight="700">كأس الماء</text>
+          <text x="568" y="328" fill="#f6d9e8" font-size="15" font-weight="700">حساس العكارة</text>
+          <text x="568" y="348" fill="#cfa5c4" font-size="12" direction="ltr">KY-018</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="card controls">
+      <div>
+        <span class="lbl">شاشة LCD</span>
+        <div class="lcdwrap"><div class="lcdbezel"><pre class="lcd" id="lcd" aria-live="off"></pre></div></div>
+      </div>
+
+      <div>
+        <span class="lbl">الضوء الواصل للحساس (محاكاة)</span>
+        <div class="pct" id="pct">100%</div>
+        <div class="bar"><i id="bar"></i></div>
+      </div>
+
+      <div>
+        <label class="lbl" for="slider">درجة عكارة الماء</label>
+        <input type="range" id="slider" min="0" max="100" step="1" value="30">
+        <div class="ends"><span>صافي</span><span>معتم</span></div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="btnSoil" type="button">رمي حفنة طين</button>
+        <button class="btn" id="btnStir" type="button">تحريك الماء</button>
+        <button class="btn" id="btnClean" type="button">تنظيف الماء</button>
+      </div>
+    </div>
+
+    <div class="card desc">
+      <span class="badge" id="dLevel">مستوى 0</span>
+      <h3 id="dName"></h3>
+      <p id="dText"></p>
+    </div>
+
+    <div class="card chartcard">
+      <h3>كم ضوءاً يصل للحساس؟</h3>
+      <svg class="chart" id="chart" viewBox="0 0 460 250" role="img" aria-label="رسم يبين أن الضوء الواصل للحساس يقل كلما ارتفع مستوى العكارة من صفر إلى خمسة"></svg>
+      <p class="note-s">نموذج مبسط: كل زيادة في الجسيمات تحجب نسبة متقاربة من الضوء. القراءات الحقيقية تختلف قليلاً.</p>
+    </div>
+
+    <div class="tablebox">
+      <h3>جدول المستويات</h3>
+      <p class="note-s">اضغط على أي مستوى لتجربته في الكأس.</p>
+      <ul class="levels" id="lvList"></ul>
+    </div>
+  </div>
+</section>
+
+<section id="detective" aria-labelledby="h-det">
+  <h2 id="h-det">تحدّي محقق المياه <span class="pill-new">جديد</span></h2>
+  <p class="lead">خمس عينات ماء ولا شيء غير عينيك. رتّبها من الأصفى إلى الأعكر، ثم دع الحساس يكشف الحقيقة. بعض العينات ملوّنة لكنها رائقة، وبعضها شاحب لكنه مليء بالجسيمات. ولديك ثلاث فرص لمصباح التلميح: يضيء شعاعاً من جانب العينة، وكلما زادت الجسيمات ظهرت خطوط ضوء أكثر.</p>
+  <div class="det" id="det">
+    <p class="det-step" id="detStep" aria-live="polite"></p>
+    <div class="g5" id="shelf" role="group" aria-label="العينات"></div>
+    <div>
+      <div class="ends" aria-hidden="true"><span>الأصفى</span><span>الأعكر</span></div>
+      <div class="g5" id="slots" role="group" aria-label="ترتيبك"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="detHint" type="button" aria-pressed="false">مصباح التلميح</button>
+      <button class="btn primary" id="detGo" type="button" disabled>افحصها بالحساس</button>
+      <button class="btn" id="detAgain" type="button">عينات جديدة</button>
+    </div>
+    <div class="rig" id="rigBox" hidden>
+      <svg class="rs" viewBox="0 0 640 230" role="img" aria-label="جهاز الفحص: مصباح وكأس عينة وحساس">
+        <defs>
+          <linearGradient id="rbeam" gradientUnits="userSpaceOnUse" x1="120" y1="0" x2="530" y2="0">
+            <stop offset="0" stop-color="#ffd54a" stop-opacity=".95"/>
+            <stop offset=".373" stop-color="#ffd54a" stop-opacity=".95"/>
+            <stop id="rbs2" offset=".605" stop-color="#ffd54a" stop-opacity=".95"/>
+            <stop id="rbs3" offset="1" stop-color="#ffd54a" stop-opacity=".95"/>
+          </linearGradient>
+          <filter id="rblur" x="-10%" y="-80%" width="120%" height="260%"><feGaussianBlur stdDeviation="9"/></filter>
+          <filter id="rblur2" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="8"/></filter>
+        </defs>
+        <rect width="640" height="230" fill="#2a0f2e"/>
+        <polygon points="120,100 530,94 530,138 120,132" fill="url(#rbeam)" filter="url(#rblur)" opacity=".75"/>
+        <polygon points="120,108 530,104 530,128 120,124" fill="url(#rbeam)"/>
+        <g id="rigG"></g>
+        <rect x="34" y="76" width="64" height="80" rx="6" fill="#15151b" stroke="#3a3a46" stroke-width="2"/>
+        <rect x="96" y="103" width="26" height="26" rx="13" fill="#fff7d1"/>
+        <circle cx="106" cy="116" r="16" fill="#ffd54a" opacity=".6" filter="url(#rblur2)"/>
+        <circle id="rigGlow" cx="552" cy="116" r="30" fill="#ffd54a" opacity=".8" filter="url(#rblur2)"/>
+        <rect x="530" y="72" width="76" height="88" rx="6" fill="#1f4aa8" stroke="#163a86" stroke-width="2"/>
+        <circle cx="552" cy="116" r="16" fill="#c98a3a" stroke="#8a4f14" stroke-width="2"/>
+        <path d="M542 110q5-6 10 0t10 0M542 118q5-6 10 0t10 0M542 126q5-6 10 0t10 0" fill="none" stroke="#7a420f" stroke-width="2" stroke-linecap="round"/>
+        <g text-anchor="middle" style="font-family:Tajawal,sans-serif">
+          <text x="66" y="186" fill="#f6d9e8" font-size="15" font-weight="700">المصباح</text>
+          <text x="66" y="206" fill="#cfa5c4" font-size="12" direction="ltr">KY-016</text>
+          <text x="568" y="186" fill="#f6d9e8" font-size="15" font-weight="700">الحساس</text>
+          <text x="568" y="206" fill="#cfa5c4" font-size="12" direction="ltr">KY-018</text>
+        </g>
+      </svg>
+      <div class="rigbar">
+        <div class="lcdwrap"><div class="lcdbezel"><pre class="lcd" id="rigLcd"></pre></div></div>
+        <p id="rigMsg"></p>
+      </div>
+    </div>
+    <div id="detResult"></div>
+  </div>
+</section>
+
+<section id="parts" aria-labelledby="h-parts">
+  <h2 id="h-parts">قطع المشروع</h2>
+  <p class="lead">أربع قطع تعمل معاً. اضغط على "اعرف أكثر" لتعرف دور كل واحدة.</p>
+  <div class="parts">
+    <article class="part">
+      <svg viewBox="0 0 120 80" aria-hidden="true">
+        <rect x="4" y="8" width="112" height="64" rx="6" fill="#0f6aa6"/>
+        <rect x="0" y="18" width="24" height="20" fill="#b8bec6"/><rect x="0" y="48" width="22" height="16" fill="#1d1d22"/>
+        <rect x="38" y="12" width="72" height="5" fill="#1d1d22"/><rect x="42" y="63" width="58" height="5" fill="#1d1d22"/>
+        <rect x="52" y="34" width="42" height="12" rx="2" fill="#1d1d22"/>
+        <circle cx="34" cy="48" r="7" fill="none" stroke="#bfe4f7" stroke-width="2"/>
+      </svg>
+      <h3>أردوينو Uno</h3>
+      <span class="role">دماغ الجهاز</span>
+      <p class="more" hidden>يقرأ إشارة الحساس ويحوّلها بالبرنامج إلى مستوى من 0 إلى 5، ثم يرسله إلى الشاشة.</p>
+      <button class="btn" type="button" aria-expanded="false">اعرف أكثر</button>
+    </article>
+    <article class="part">
+      <svg viewBox="0 0 120 80" aria-hidden="true">
+        <rect x="14" y="6" width="92" height="64" rx="6" fill="#1f4aa8"/>
+        <circle cx="46" cy="30" r="16" fill="#c98a3a" stroke="#8a4f14" stroke-width="2"/>
+        <path d="M36 24q5-6 10 0t10 0M36 32q5-6 10 0t10 0M36 40q5-6 10 0t10 0" fill="none" stroke="#7a420f" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="86" cy="22" r="7" fill="#d8dde6"/>
+        <rect x="64" y="70" width="6" height="10" fill="#c9cdd6"/><rect x="76" y="70" width="6" height="10" fill="#c9cdd6"/><rect x="88" y="70" width="6" height="10" fill="#c9cdd6"/>
+      </svg>
+      <h3>حساس KY-018</h3>
+      <span class="role">عين الجهاز</span>
+      <p class="more" hidden>مقاومة ضوئية: كلما وصلها ضوء أكثر تغيّرت مقاومتها، فتتغير الإشارة التي يقرأها أردوينو.</p>
+      <button class="btn" type="button" aria-expanded="false">اعرف أكثر</button>
+    </article>
+    <article class="part">
+      <svg viewBox="0 0 120 80" aria-hidden="true">
+        <rect x="14" y="30" width="92" height="44" rx="6" fill="#15151b" stroke="#3a3a46" stroke-width="2"/>
+        <circle cx="60" cy="26" r="18" fill="#fff" fill-opacity=".85" stroke="#cfd3dc" stroke-width="2"/>
+        <rect x="46" y="16" width="28" height="12" rx="3" fill="#e9e1b8" fill-opacity=".9"/>
+        <rect x="42" y="64" width="6" height="12" fill="#c9cdd6"/><rect x="57" y="64" width="6" height="12" fill="#c9cdd6"/><rect x="72" y="64" width="6" height="12" fill="#c9cdd6"/>
+      </svg>
+      <h3>مصباح KY-016</h3>
+      <span class="role">مصدر الضوء</span>
+      <p class="more" hidden>وحدة إضاءة LED ترسل شعاعاً ثابتاً عبر كأس الماء نحو الحساس.</p>
+      <button class="btn" type="button" aria-expanded="false">اعرف أكثر</button>
+    </article>
+    <article class="part">
+      <svg viewBox="0 0 120 80" aria-hidden="true">
+        <rect x="2" y="10" width="116" height="60" rx="5" fill="#1f8f4c"/>
+        <rect x="12" y="20" width="96" height="36" rx="3" fill="#101a33"/>
+        <rect x="16" y="24" width="88" height="28" rx="2" fill="#1d3fc4"/>
+        <g fill="#e6f0ff" opacity=".85"><rect x="20" y="29" width="5" height="8"/><rect x="28" y="29" width="5" height="8"/><rect x="36" y="29" width="5" height="8"/><rect x="44" y="29" width="5" height="8"/><rect x="20" y="40" width="5" height="8"/><rect x="28" y="40" width="5" height="8"/><rect x="36" y="40" width="5" height="8"/></g>
+        <g fill="#c9a24a"><rect x="22" y="62" width="4" height="5"/><rect x="32" y="62" width="4" height="5"/><rect x="42" y="62" width="4" height="5"/><rect x="52" y="62" width="4" height="5"/></g>
+      </svg>
+      <h3>شاشة LCD</h3>
+      <span class="role">لوحة النتيجة</span>
+      <p class="more" hidden>تعرض مستوى العكارة ليعرف الجميع حالة الماء بنظرة واحدة.</p>
+      <button class="btn" type="button" aria-expanded="false">اعرف أكثر</button>
+    </article>
+  </div>
+</section>
+
+<section id="flow-sec" aria-labelledby="h-flow">
+  <h2 id="h-flow">رحلة الإشارة</h2>
+  <p class="lead">من الضوء إلى الرقم على الشاشة في خمس خطوات.</p>
+  <ol class="flow" id="flow">
+    <li><span class="num">1</span><h3>المصباح</h3><p>يرسل شعاع ضوء إلى داخل الماء.</p></li>
+    <li><span class="num">2</span><h3>الماء</h3><p>الجسيمات المعلقة تشتت جزءاً من الضوء.</p></li>
+    <li><span class="num">3</span><h3>الحساس</h3><p>يستقبل ما تبقى من الضوء.</p></li>
+    <li><span class="num">4</span><h3>أردوينو</h3><p>يقرأ الإشارة ويحدد المستوى من 0 إلى 5.</p></li>
+    <li><span class="num">5</span><h3>الشاشة</h3><p>تعرض مستوى العكارة.</p></li>
+  </ol>
+  <button class="btn primary" id="btnFlow" type="button">شغّل الرحلة</button>
+</section>
+
+<section id="science" aria-labelledby="h-sci">
+  <h2 id="h-sci">الكيمياء والفيزياء</h2>
+  <p class="lead">تحدث العكارة لأن في الماء جسيمات معلقة، مثل الطين والغبار. هذه الجسيمات تبعثر الضوء القادم، فيقل ما يعبر الماء.</p>
+  <div class="facts">
+    <div class="fact"><h3>جسيمات معلقة</h3><p>طين وغبار صغير جداً يطفو في الماء ولا يترسب بسرعة.</p></div>
+    <div class="fact"><h3>تشتيت الضوء</h3><p>كل جسيم يرد جزءاً من الشعاع إلى اتجاهات أخرى. هذه هي الخطوط الصغيرة التي رأيتها في الكأس.</p></div>
+    <div class="fact"><h3>ضوء أقل، مستوى أعلى</h3><p>عندما يستقبل الحساس ضوءاً أقل يقرأ أردوينو عكارة أعلى وتعرضها الشاشة.</p></div>
+  </div>
+</section>
+
+<section id="quiz-sec" aria-labelledby="h-quiz">
+  <h2 id="h-quiz">اختبر معلوماتك</h2>
+  <p class="lead">خمسة أسئلة سريعة عن المشروع.</p>
+  <div class="card quiz" id="quiz"></div>
+</section>
+
+<section aria-label="ملاحظة">
+  <div class="warn">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 2 43h44Z" fill="#e5483a" stroke="#a82a20" stroke-width="3" stroke-linejoin="round"/><rect x="21.5" y="16" width="5" height="14" rx="2" fill="#fff"/><circle cx="24" cy="36" r="3" fill="#fff"/></svg>
+    <p><strong>ملاحظة:</strong> جهاز تعليمي، والنتيجة نسبية وليست لتحديد صلاحية الماء للشرب.</p>
+  </div>
+</section>
+
+<footer>إعداد الطالبة: ريمان حسن كريري</footer>
+</div>
+
+<script>
+(function(){
+  try{document.documentElement.setAttribute('dir','rtl');document.documentElement.setAttribute('lang','ar');}catch(e){}
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+  var NS='http://www.w3.org/2000/svg';
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var LEVELS=[
+    {name:'ماء صافي',lcd:'CLEAR',text:'الضوء يعبر الماء تقريباً كله، والحساس يستقبل أقوى إشارة.'},
+    {name:'عكارة خفيفة',lcd:'SLIGHT',text:'جسيمات قليلة جداً تبعثر جزءاً صغيراً من الشعاع.'},
+    {name:'عكارة متوسطة',lcd:'MEDIUM',text:'الماء يبدو غائماً قليلاً، والضوء الواصل يقل بوضوح.'},
+    {name:'عكارة عالية',lcd:'HIGH',text:'جسيمات كثيرة تبعثر الضوء في كل الاتجاهات.'},
+    {name:'عكارة شديدة',lcd:'SEVERE',text:'أغلب الضوء يتشتت قبل أن يصل إلى الحساس.'},
+    {name:'ماء معتم',lcd:'MURKY',text:'بالكاد يصل ضوء إلى الحساس، وهذه أعلى قراءة.'}
+  ];
+  var CLEAR=[118,200,246], MUD=[150,98,44];
+  function mix(a,b,k){return [0,1,2].map(function(i){return Math.round(a[i]+(b[i]-a[i])*k)})}
+  function levelOf(t){return Math.min(5,Math.max(0,Math.round(t/20)))}
+  function trans(t){return Math.exp(-2.7*t/100)}
+
+  var t=30, shown=-1, stir=0;
+
+  /* ---------- level list ---------- */
+  var lvList=$('#lvList'), lvBtns=[];
+  LEVELS.forEach(function(L,i){
+    var li=document.createElement('li');
+    var b=document.createElement('button');
+    b.type='button'; b.className='lv'; b.setAttribute('aria-pressed','false');
+    var c=mix(CLEAR,MUD,Math.pow(i/5,.8));
+    b.innerHTML='<b>'+i+'</b><span class="sw" style="background:rgb('+c.join(',')+')"></span><span>'+L.name+'</span><small>NTU ≈ '+i+'</small>';
+    b.addEventListener('click',function(){tweenTo(i*20,600)});
+    li.appendChild(b); lvList.appendChild(li); lvBtns.push(b);
+  });
+
+  /* ---------- particles ---------- */
+  var pg=$('#particles'), MAXP=240, P=[];
+  for(var i=0;i<MAXP;i++){
+    var c=document.createElementNS(NS,'circle');
+    var r=1.6+Math.random()*3.4;
+    c.setAttribute('r',r.toFixed(1));
+    c.setAttribute('fill',Math.random()<.5?'#6b4220':'#8d5a2b');
+    c.setAttribute('fill-opacity',(.55+Math.random()*.4).toFixed(2));
+    c.style.visibility='hidden';
+    pg.appendChild(c);
+    var p={c:c,x:250+Math.random()*142,y:114+Math.random()*182,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6};
+    c.setAttribute('cx',p.x.toFixed(1)); c.setAttribute('cy',p.y.toFixed(1));
+    P.push(p);
+  }
+  function tick(){
+    var sp=1+stir*3, m=.6*sp;
+    for(var i=0;i<shown;i++){
+      var p=P[i];
+      p.vx+=(Math.random()-.5)*.08*sp;
+      p.vy+=(Math.random()-.5)*.08*sp+.004;
+      p.vx=Math.max(-m,Math.min(m,p.vx)); p.vy=Math.max(-m,Math.min(m,p.vy));
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<250){p.x=250;p.vx=Math.abs(p.vx)}
+      if(p.x>392){p.x=392;p.vx=-Math.abs(p.vx)}
+      if(p.y<114){p.y=114;p.vy=Math.abs(p.vy)}
+      if(p.y>296){p.y=296;p.vy=-Math.abs(p.vy)}
+      p.c.setAttribute('cx',p.x.toFixed(1)); p.c.setAttribute('cy',p.y.toFixed(1));
+    }
+    if(stir>0){stir=Math.max(0,stir-.006)}
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------- scattered light ---------- */
+  var rg=$('#rays'), RAYS=[];
+  for(var j=0;j<26;j++){var l=document.createElementNS(NS,'line');l.style.visibility='hidden';rg.appendChild(l);RAYS.push(l)}
+  function shuffleRays(){
+    var n=Math.round(t/100*RAYS.length);
+    RAYS.forEach(function(l,i){
+      if(i>=n){l.style.visibility='hidden';return}
+      var x=236+Math.random()*160, y=168+Math.random()*24, a=Math.random()*Math.PI*2, len=10+Math.random()*22;
+      l.setAttribute('x1',x.toFixed(1)); l.setAttribute('y1',y.toFixed(1));
+      l.setAttribute('x2',(x+Math.cos(a)*len).toFixed(1)); l.setAttribute('y2',(y+Math.sin(a)*len).toFixed(1));
+      l.setAttribute('stroke-opacity',(.35+Math.random()*.5).toFixed(2));
+      l.style.visibility='visible';
+    });
+  }
+
+  /* ---------- chart ---------- */
+  var CW=460, CH=250, ml=46, mr=16, mt=26, mb=44, pw=CW-ml-mr, ph=CH-mt-mb;
+  function X(v){return ml+pw*v/100}
+  function Y(p){return mt+ph*(1-p/100)}
+  (function buildChart(){
+    var s='';
+    [0,25,50,75,100].forEach(function(p){
+      s+='<line class="grid" x1="'+ml+'" x2="'+(CW-mr)+'" y1="'+Y(p)+'" y2="'+Y(p)+'"/>';
+      s+='<text class="ax" x="'+(ml-8)+'" y="'+(Y(p)+5)+'" text-anchor="end">'+p+'%</text>';
+    });
+    for(var k=0;k<=5;k++){
+      s+='<line class="grid" x1="'+X(k*20)+'" x2="'+X(k*20)+'" y1="'+mt+'" y2="'+Y(0)+'"/>';
+      s+='<text class="ax" x="'+X(k*20)+'" y="'+(Y(0)+20)+'" text-anchor="middle">'+k+'</text>';
+    }
+    var d='',a='';
+    for(var v=0;v<=100;v+=2){d+=(v?'L':'M')+X(v).toFixed(1)+' '+Y(trans(v)*100).toFixed(1)}
+    a=d+'L'+X(100)+' '+Y(0)+'L'+X(0)+' '+Y(0)+'Z';
+    s+='<path class="area" d="'+a+'"/><path class="curve" d="'+d+'"/>';
+    s+='<line class="guide" id="mx"/><line class="guide" id="my"/>';
+    s+='<circle class="dot" id="mdot" r="8"/><text class="val" id="mtxt"></text>';
+    s+='<text class="ax" x="'+(ml+pw/2)+'" y="'+(CH-6)+'" text-anchor="middle">مستوى العكارة</text>';
+    s+='<text class="ax" x="4" y="14" text-anchor="start">الضوء الواصل</text>';
+    $('#chart').innerHTML=s;
+  })();
+  var mdot=$('#mdot'),mx=$('#mx'),my=$('#my'),mtxt=$('#mtxt');
+  function chartMark(){
+    var p=trans(t)*100,x=X(t),y=Y(p);
+    mdot.setAttribute('cx',x);mdot.setAttribute('cy',y);
+    mx.setAttribute('x1',x);mx.setAttribute('x2',x);mx.setAttribute('y1',y);mx.setAttribute('y2',Y(0));
+    my.setAttribute('x1',X(0));my.setAttribute('x2',x);my.setAttribute('y1',y);my.setAttribute('y2',y);
+    mtxt.textContent=Math.round(p)+'%';
+    var right=x>CW-90;
+    mtxt.setAttribute('text-anchor',right?'end':'start');
+    mtxt.setAttribute('x',right?x-12:x+12);
+    mtxt.setAttribute('y',(y-12<mt+8)?y+28:y-12);
+  }
+
+  /* ---------- render ---------- */
+  var slider=$('#slider'),water=$('#water'),bs2=$('#bs2'),bs3=$('#bs3'),glow=$('#ldrGlow');
+  var lcd=$('#lcd'),pct=$('#pct'),bar=$('#bar');
+  function render(){
+    var L=levelOf(t),k=t/100,T=trans(t);
+    slider.value=Math.round(t);
+    var col=mix(CLEAR,MUD,Math.pow(k,.8));
+    water.setAttribute('fill','rgb('+col.join(',')+')');
+    water.setAttribute('fill-opacity',(.5+.45*k).toFixed(2));
+    var n=Math.round(t*2.2);
+    if(n!==shown){shown=n;P.forEach(function(p,i){p.c.style.visibility=i<n?'visible':'hidden'})}
+    var o=(.95*T).toFixed(3);
+    bs2.setAttribute('stop-opacity',o); bs3.setAttribute('stop-opacity',o);
+    glow.setAttribute('opacity',(.85*T).toFixed(3));
+    lcd.textContent='TURBIDITY: '+L+' NTU\n'+LEVELS[L].lcd;
+    pct.textContent=Math.round(T*100)+'%';
+    bar.style.width=Math.max(3,T*100).toFixed(1)+'%';
+    $('#dLevel').textContent='مستوى '+L;
+    $('#dName').textContent=LEVELS[L].name;
+    $('#dText').textContent=LEVELS[L].text;
+    lvBtns.forEach(function(b,i){b.setAttribute('aria-pressed',i===L?'true':'false')});
+    slider.setAttribute('aria-valuetext','المستوى '+L+': '+LEVELS[L].name);
+    chartMark();
+    if(reduce)shuffleRays();
+  }
+
+  var raf2=0;
+  function tweenTo(target,dur){
+    cancelAnimationFrame(raf2);
+    if(reduce){t=target;render();return}
+    var from=t,st=performance.now();
+    (function step(now){
+      var k=Math.min(1,(now-st)/dur);
+      t=from+(target-from)*(1-Math.pow(1-k,3));
+      render();
+      if(k<1)raf2=requestAnimationFrame(step);
+    })(st);
+  }
+  slider.addEventListener('input',function(){cancelAnimationFrame(raf2);t=+slider.value;render()});
+
+  function splash(){
+    var r=$('#ripple');
+    if(r.animate)r.animate([{transform:'scale(1)',opacity:.9},{transform:'scale(8,5)',opacity:0}],{duration:700,easing:'ease-out'});
+  }
+  $('#btnSoil').addEventListener('click',function(){
+    var target=Math.min(100,t+12);
+    if(reduce){t=target;render();return}
+    var c=$('#clump'); c.style.visibility='visible';
+    var a=c.animate([{transform:'translateY(0)'},{transform:'translateY(78px)'}],{duration:420,easing:'cubic-bezier(.5,0,1,.6)'});
+    a.onfinish=function(){c.style.visibility='hidden';splash();stir=Math.max(stir,.6);tweenTo(target,500)};
+  });
+  $('#btnStir').addEventListener('click',function(){stir=1;if(reduce)shuffleRays()});
+  $('#btnClean').addEventListener('click',function(){stir=.5;tweenTo(0,900)});
+
+  render();
+  if(!reduce){requestAnimationFrame(tick);setInterval(shuffleRays,140)}
+
+  /* ---------- detective challenge ---------- */
+  (function(){
+    var TINTS=[[90,185,240],[225,165,60],[110,200,140],[240,140,185],[170,140,225],[200,230,245]];
+    var PARTC=[[112,82,50],[201,190,168],[150,150,150]];
+    var NAMES=['أ','ب','ج','د','هـ'];
+    var GP='M12 12H88L82 124Q81 130 75 130H25Q19 130 18 124Z';
+    var S=[],order=[],phase='sort',charges=3,lightOn=false,note='',rigT=1;
+    var shelf=$('#shelf'),slotsEl=$('#slots'),stepEl=$('#detStep'),btnGo=$('#detGo'),btnHint=$('#detHint'),btnAgain=$('#detAgain');
+    var rigBox=$('#rigBox'),resBox=$('#detResult'),rigG=$('#rigG'),rigLcd=$('#rigLcd'),rigMsg=$('#rigMsg');
+    var rbs2=$('#rbs2'),rbs3=$('#rbs3'),rigGlow=$('#rigGlow');
+
+    function rnd(a,b){return a+Math.random()*(b-a)}
+    function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var tmp=a[i];a[i]=a[j];a[j]=tmp}return a}
+    function sleep(ms){return new Promise(function(r){setTimeout(r,reduce?Math.min(ms,150):ms)})}
+
+    function newGame(){
+      var lv=shuffle([0,1,2,3,4,5]).slice(0,5), tn=shuffle(TINTS);
+      S=lv.map(function(L,i){
+        var pc=PARTC[Math.floor(Math.random()*PARTC.length)],parts=[],rays=[],k,q;
+        for(k=0;k<L*11;k++)parts.push({x:rnd(22,78),y:rnd(42,122),r:rnd(.9,2.2),o:rnd(.6,.9)});
+        for(q=0;q<L*3;q++){var x=rnd(24,76),y=rnd(68,78),a=rnd(0,6.28),l=rnd(3,8);rays.push([x,y,x+Math.cos(a)*l,y+Math.sin(a)*l])}
+        return {i:i,name:NAMES[i],level:L,tint:tn[i],pc:pc,parts:parts,rays:rays};
+      });
+      order=[];phase='sort';lightOn=false;charges=3;note='';
+      rigBox.hidden=true;resBox.innerHTML='';
+      drawAll();
+    }
+
+    function glassInner(s,pre,hint){
+      var id=pre+s.i,p='',h='';
+      s.parts.forEach(function(d){p+='<circle cx="'+d.x.toFixed(1)+'" cy="'+d.y.toFixed(1)+'" r="'+d.r.toFixed(1)+'" fill="rgb('+s.pc.join(',')+')" fill-opacity="'+d.o.toFixed(2)+'"/>'});
+      if(hint){
+        h='<g class="hg"><rect x="0" y="64" width="100" height="16" fill="#ffd54a" fill-opacity=".5"/>';
+        s.rays.forEach(function(r){h+='<line x1="'+r[0].toFixed(1)+'" y1="'+r[1].toFixed(1)+'" x2="'+r[2].toFixed(1)+'" y2="'+r[3].toFixed(1)+'" stroke="#fff6bd" stroke-width="1.3" stroke-linecap="round"/>'});
+        h+='</g>';
+      }
+      return '<defs><clipPath id="'+id+'"><path d="'+GP+'"/></clipPath></defs>'+
+        '<g clip-path="url(#'+id+')">'+
+        '<rect x="0" y="34" width="100" height="100" fill="rgb('+s.tint.join(',')+')" fill-opacity=".62"/>'+
+        '<rect x="0" y="34" width="100" height="100" fill="#fff" fill-opacity="'+(s.level*.05).toFixed(2)+'"/>'+
+        p+h+'</g>'+
+        '<ellipse cx="50" cy="34" rx="36" ry="3" fill="#fff" fill-opacity=".3"/>'+
+        '<path class="gl" d="'+GP+'" fill="none" stroke-width="3" stroke-linejoin="round"/>';
+    }
+
+    function drawAll(){
+      shelf.innerHTML='';slotsEl.innerHTML='';
+      S.forEach(function(s){
+        var b=document.createElement('button');
+        b.type='button';b.className='sample';
+        b.setAttribute('aria-label','عينة '+s.name);
+        b.innerHTML='<svg viewBox="0 0 100 140" aria-hidden="true">'+glassInner(s,'sh',true)+'</svg><span class="nm">عينة '+s.name+'</span>';
+        b.disabled=order.indexOf(s.i)>-1||phase!=='sort';
+        b.addEventListener('click',function(){pick(s.i,b)});
+        shelf.appendChild(b);
+      });
+      for(var k=0;k<5;k++){
+        (function(k){
+          var sl=document.createElement('button');
+          sl.type='button';sl.className='slot';
+          var si=order[k],inner='<b class="n">'+(k+1)+'</b>';
+          if(si!==undefined){
+            var s=S[si];
+            sl.classList.add('full');
+            inner+='<svg viewBox="0 0 100 140" aria-hidden="true">'+glassInner(s,'sl',true)+'</svg><span class="nm">عينة '+s.name+'</span><span class="res"></span>';
+            sl.setAttribute('aria-label','المكان '+(k+1)+': عينة '+s.name+'. اضغط لإرجاعها');
+            sl.disabled=phase!=='sort';
+            sl.addEventListener('click',function(){unpick(k,sl)});
+          }else{
+            inner+='<span class="ph"></span><span class="nm">&nbsp;</span><span class="res"></span>';
+            sl.setAttribute('aria-label','المكان '+(k+1)+' فارغ');
+            sl.disabled=true;
+          }
+          sl.innerHTML=inner;
+          slotsEl.appendChild(sl);
+        })(k);
+      }
+      updateControls();
+    }
+
+    function updateControls(){
+      btnHint.textContent='مصباح التلميح ('+charges+')';
+      btnHint.disabled=charges<=0||phase!=='sort';
+      btnHint.setAttribute('aria-pressed',lightOn?'true':'false');
+      btnGo.disabled=!(phase==='sort'&&order.length===5);
+      btnAgain.disabled=phase==='test';
+      var m='';
+      if(phase==='sort'){
+        if(note)m=note;
+        else if(lightOn)m='المصباح جاهز. اضغط على أي عينة لتضيء شعاعاً من جانبها.';
+        else if(order.length<5)m='اختر العينة رقم '+(order.length+1)+(order.length===0?': الأصفى في رأيك.':order.length===4?': الأعكر في رأيك.':'.');
+        else m='رتّبت العينات كلها. اضغط "افحصها بالحساس" لتعرف الحقيقة.';
+      }else if(phase==='test')m='الحساس يفحص العينات بالترتيب الذي اخترته...';
+      else m='انتهى التحدي. يمكنك المحاولة بعينات جديدة.';
+      stepEl.textContent=m;
+    }
+
+    function inspect(el){
+      charges--;lightOn=false;
+      note='شاهد الخطوط الصغيرة داخل الشعاع: كل جسيم يبعثر جزءاً من الضوء، فكلما زادت الخطوط زادت العكارة.';
+      updateControls();
+      el.classList.add('lit');
+      setTimeout(function(){el.classList.remove('lit')},3400);
+    }
+    function pick(i,el){
+      if(phase!=='sort')return;
+      if(lightOn){inspect(el);return}
+      if(order.indexOf(i)>-1||order.length>=5)return;
+      note='';order.push(i);drawAll();
+    }
+    function unpick(k,el){
+      if(phase!=='sort')return;
+      if(lightOn){inspect(el);return}
+      note='';order.splice(k,1);drawAll();
+    }
+
+    btnHint.addEventListener('click',function(){
+      if(charges<=0||phase!=='sort')return;
+      lightOn=!lightOn;note='';updateControls();
+    });
+    btnAgain.addEventListener('click',newGame);
+
+    function setBeam(T){
+      rbs2.setAttribute('stop-opacity',(.95*T).toFixed(3));
+      rbs3.setAttribute('stop-opacity',(.95*T).toFixed(3));
+      rigGlow.setAttribute('opacity',(.85*T).toFixed(3));
+    }
+    function tweenBeam(to){
+      return new Promise(function(done){
+        if(reduce){rigT=to;setBeam(to);done();return}
+        var from=rigT,st=performance.now();
+        (function f(n){
+          var k=Math.min(1,(n-st)/700);
+          rigT=from+(to-from)*(1-Math.pow(1-k,3));
+          setBeam(rigT);
+          if(k<1)requestAnimationFrame(f);else done();
+        })(st);
+      });
+    }
+
+    async function runTest(){
+      phase='test';lightOn=false;note='';
+      rigBox.hidden=false;drawAll();
+      var sorted=S.map(function(s){return s.level}).sort(function(a,b){return a-b});
+      var right=0;
+      rigT=1;setBeam(1);rigG.innerHTML='';
+      rigLcd.textContent='TURBIDITY: - NTU\nWAITING';
+      try{rigBox.scrollIntoView({behavior:reduce?'auto':'smooth',block:'nearest'})}catch(e){}
+      for(var k=0;k<5;k++){
+        var s=S[order[k]];
+        rigMsg.textContent='فحص عينة '+s.name+' ('+(k+1)+' من 5)';
+        rigG.innerHTML='<svg x="258" y="25" width="125" height="175" viewBox="0 0 100 140">'+glassInner(s,'rg',false)+'</svg>';
+        if(!reduce&&rigG.animate)rigG.animate([{transform:'translateX(-90px)',opacity:0},{transform:'translateX(0)',opacity:1}],{duration:420,easing:'ease-out'});
+        await sleep(520);
+        await tweenBeam(trans(s.level*20));
+        rigLcd.textContent='TURBIDITY: '+s.level+' NTU\n'+LEVELS[s.level].lcd;
+        var slot=slotsEl.children[k],ok=s.level===sorted[k];
+        if(ok)right++;
+        slot.classList.add(ok?'ok':'no');
+        slot.querySelector('.res').textContent=ok?'✓ المستوى '+s.level:'✗ المستوى '+s.level+' · مكانها '+(sorted.indexOf(s.level)+1);
+        await sleep(1000);
+      }
+      rigMsg.textContent='انتهى الفحص.';
+      showResult(right);
+    }
+    btnGo.addEventListener('click',runTest);
+
+    function showResult(right){
+      phase='done';
+      var msg=right===5?'عين خبير! رتّبت العينات كلها كما رتّبها الحساس.':right>=3?'أحسنت! الحساس وافقك في معظم العينات.':'العين تخدع أحياناً. الحساس يعتمد على الضوء فقط، جرّب مرة ثانية.';
+      resBox.innerHTML='<div class="score">'+right+' / 5</div><p><strong>'+msg+'</strong></p><p class="note-s">اللون وحده ليس دليلاً على العكارة: ماء ملوّن قد يكون رائقاً، وماء شاحب قد يكون مليئاً بالجسيمات. وفي الواقع قد تخدع الأصباغ القوية الحساس أيضاً، لذلك هذا الجهاز تعليمي.</p>';
+      updateControls();
+      if(right===5&&!reduce){
+        var box=$('#det');
+        for(var i=0;i<22;i++){
+          var d=document.createElement('span');d.className='conf';
+          d.style.left=(Math.random()*96)+'%';
+          d.style.animationDelay=(Math.random()*.8)+'s';
+          box.appendChild(d);
+        }
+        setTimeout(function(){$$('.conf',box).forEach(function(n){n.remove()})},3200);
+      }
+    }
+
+    newGame();
+  })();
+
+  /* ---------- parts ---------- */
+  $$('.part button').forEach(function(b){
+    b.addEventListener('click',function(){
+      var more=b.parentNode.querySelector('.more');
+      var open=b.getAttribute('aria-expanded')==='true';
+      more.hidden=open;
+      b.setAttribute('aria-expanded',open?'false':'true');
+      b.textContent=open?'اعرف أكثر':'أخفِ التفاصيل';
+    });
+  });
+
+  /* ---------- flow ---------- */
+  var steps=$$('#flow li'),btnFlow=$('#btnFlow');
+  btnFlow.addEventListener('click',function(){
+    btnFlow.disabled=true;
+    steps.forEach(function(s){s.classList.remove('on')});
+    var i=0;
+    (function next(){
+      steps.forEach(function(s,j){s.classList.toggle('on',j===i)});
+      i++;
+      if(i<steps.length){setTimeout(next,1000)}
+      else{setTimeout(function(){steps.forEach(function(s){s.classList.remove('on')});btnFlow.disabled=false;btnFlow.textContent='شغّل الرحلة مرة أخرى'},1400)}
+    })();
+  });
+
+  /* ---------- quiz ---------- */
+  var Q=[
+    {q:'ماذا يقيس حساس العكارة؟',o:['حرارة الماء','نقاء الماء من خلال مرور الضوء','ملوحة الماء','سرعة جريان الماء'],a:1,e:'الحساس يقيس كمية الضوء التي تعبر الماء ليعرف مدى نقائه.'},
+    {q:'ماذا يحدث للضوء الواصل للحساس عندما يزيد الطين في الماء؟',o:['يزيد','يقل','لا يتغير','يتحول إلى لون آخر'],a:1,e:'الجسيمات تبعثر الضوء، فيصل إلى الحساس ضوء أقل.'},
+    {q:'ما سبب العكارة؟',o:['جسيمات معلقة مثل الطين والغبار','زيادة الأكسجين','برودة الماء','ضغط الهواء'],a:0,e:'الجسيمات الصغيرة العالقة في الماء هي التي تسبب العكارة.'},
+    {q:'أي قطعة تعرض مستوى العكارة؟',o:['مصباح KY-016','حساس KY-018','شاشة LCD','لوحة أردوينو وحدها'],a:2,e:'شاشة LCD هي التي تعرض النتيجة للمستخدم.'},
+    {q:'هل يحدد هذا الجهاز أن الماء صالح للشرب؟',o:['نعم، دائماً','لا، هو جهاز تعليمي ونتيجته نسبية','نعم، إذا كان المستوى 3','فقط في الليل'],a:1,e:'المشروع تعليمي، ولا يصلح لتحديد صلاحية الماء للشرب.'}
+  ];
+  var quiz=$('#quiz'),qi=0,score=0;
+  function showQ(){
+    var Z=Q[qi];
+    quiz.innerHTML='<div class="qmeta"><span>سؤال '+(qi+1)+' من '+Q.length+'</span><span>النقاط: '+score+'</span></div>'+
+      '<h3></h3><div class="opts"></div><p class="fb" aria-live="polite"></p><div class="row"><button class="btn primary" type="button" hidden id="qnext"></button></div>';
+    $('h3',quiz).textContent=Z.q;
+    var box=$('.opts',quiz),fb=$('.fb',quiz),nx=$('#qnext');
+    Z.o.forEach(function(txt,i){
+      var b=document.createElement('button');
+      b.type='button';b.className='opt';
+      b.innerHTML='<span class="mk"></span><span></span>';
+      b.lastChild.textContent=txt;
+      b.addEventListener('click',function(){
+        var all=$$('.opt',quiz);
+        all.forEach(function(x){x.disabled=true});
+        var ok=i===Z.a;
+        if(ok)score++;
+        all[Z.a].classList.add('good');all[Z.a].firstChild.textContent='✓';
+        if(!ok){b.classList.add('bad');b.firstChild.textContent='✗'}
+        fb.textContent=(ok?'إجابة صحيحة. ':'ليست هذه. ')+Z.e;
+        nx.textContent=qi<Q.length-1?'السؤال التالي':'اعرض النتيجة';
+        nx.hidden=false;nx.focus();
+        $('.qmeta span:last-child',quiz).textContent='النقاط: '+score;
+      });
+      box.appendChild(b);
+    });
+    nx.addEventListener('click',function(){qi++;if(qi<Q.length)showQ();else showResult()});
+  }
+  function showResult(){
+    var msg=score===Q.length?'ممتاز! أصبحت من خبراء العكارة.':score>=4?'قريب جداً! جرّب مرة أخرى للعلامة الكاملة.':'بداية جيدة! جرّب التجربة في الأعلى ثم أعد الاختبار.';
+    quiz.innerHTML='<div class="qmeta"><span>النتيجة النهائية</span></div><div class="score">'+score+' / '+Q.length+'</div><p class="fb">'+msg+'</p><div class="row"><button class="btn primary" type="button" id="qagain">أعد الاختبار</button></div>';
+    $('#qagain').addEventListener('click',function(){qi=0;score=0;showQ()});
+    if(score===Q.length&&!reduce){
+      for(var i=0;i<22;i++){
+        var d=document.createElement('span');d.className='conf';
+        d.style.left=(Math.random()*96)+'%';
+        d.style.animationDelay=(Math.random()*.8)+'s';
+        d.style.opacity=(.6+Math.random()*.4);
+        quiz.appendChild(d);
+      }
+      setTimeout(function(){$$('.conf',quiz).forEach(function(n){n.remove()})},3200);
+    }
+  }
+  showQ();
+})();
+</script>
+
+</body></html>
